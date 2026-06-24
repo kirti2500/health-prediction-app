@@ -20,6 +20,11 @@ _model = None
 def get_model():
     global _model
     if _model is None:
+        if not os.path.exists(MODEL_PATH):
+            raise FileNotFoundError(
+                "model.pkl not found. Run 'python train_model.py' first to "
+                "generate the trained model before starting the app."
+            )
         _model = joblib.load(MODEL_PATH)
     return _model
 
