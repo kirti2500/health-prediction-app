@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'edit' %}Edit Patient{% else %}Add Patient{% endif %}{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+
+        <h3 class="mb-4">{% if mode == 'edit' %}Edit Patient Record{% else %}Add New Patient{% endif %}</h3>
+
+        <form method="POST">
+
+            <div class="mb-3">
+                <label class="form-label">Full Name</label>
+                <input type="text" name="full_name" class="form-control {% if errors.full_name %}is-invalid{% endif %}"
+                       value="{{ form_data.full_name or '' }}">
+                {% if errors.full_name %}<div class="invalid-feedback">{{ errors.full_name }}</div>{% endif %}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Date of Birth</label>
+                <input type="date" name="date_of_birth" class="form-control {% if errors.date_of_birth %}is-invalid{% endif %}"
+                       value="{{ form_data.date_of_birth or '' }}">
+                {% if errors.date_of_birth %}<div class="invalid-feedback">{{ errors.date_of_birth }}</div>{% endif %}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control {% if errors.email %}is-invalid{% endif %}"
+                       value="{{ form_data.email or '' }}">
+                {% if errors.email %}<div class="invalid-feedback">{{ errors.email }}</div>{% endif %}
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Glucose (mg/dL)</label>
+                    <input type="text" name="glucose" class="form-control {% if errors.glucose %}is-invalid{% endif %}"
+                           value="{{ form_data.glucose or '' }}">
+                    {% if errors.glucose %}<div class="invalid-feedback">{{ errors.glucose }}</div>{% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Haemoglobin (g/dL)</label>
+                    <input type="text" name="haemoglobin" class="form-control {% if errors.haemoglobin %}is-invalid{% endif %}"
+                           value="{{ form_data.haemoglobin or '' }}">
+                    {% if errors.haemoglobin %}<div class="invalid-feedback">{{ errors.haemoglobin }}</div>{% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Cholesterol (mg/dL)</label>
+                    <input type="text" name="cholesterol" class="form-control {% if errors.cholesterol %}is-invalid{% endif %}"
+                           value="{{ form_data.cholesterol or '' }}">
+                    {% if errors.cholesterol %}<div class="invalid-feedback">{{ errors.cholesterol }}</div>{% endif %}
+                </div>
+            </div>
+
+            {% if mode == 'edit' %}
+            <p class="text-muted small">Remarks will be regenerated automatically based on the updated values.</p>
+            {% else %}
+            <p class="text-muted small">Remarks will be generated automatically by the prediction model after submission.</p>
+            {% endif %}
+
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-primary">
+                    {% if mode == 'edit' %}Save Changes{% else %}Add Patient{% endif %}
+                </button>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+{% endblock %}
