@@ -1,66 +1,67 @@
 """
 predictor.py
 
-Loads the trained model (model.pkl) and uses it to generate the
-"Remarks" text for a patient based on their blood test values.
+Calls the Groq API (external AI/ML service) to generate a health risk
+assessment based on the patient's blood test values. The prediction
+comes back from Groq's hosted LLM (Llama 3), not a local model.
 
-The model only outputs 0/1 + a probability - turning that into a
-readable sentence for the Remarks field is just regular Python logic,
-not the model's job.
+Groq was chosen because it's free, fast, and provides access to
+production-grade AI models via a simple REST API - which is exactly
+what this application needs for the Remarks generation.
 """
 
-import joblib
 import os
+from groq import Groq
+from dotenv import load_dotenv
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pkl")
+load_dotenv()
 
-_model = None
+_client = None
 
 
-def get_model():
-    global _model
-    if _model is None:
-        if not os.path.exists(MODEL_PATH):
-            raise FileNotFoundError(
-                "model.pkl not found. Run 'python train_model.py' first to "
-                "generate the trained model before starting the app."
+def get_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "GROQ_API_KEY not found. Make sure you have a .env file "
+                "in the project root with your Groq API key."
             )
-        _model = joblib.load(MODEL_PATH)
-    return _model
+        _client = Groq(api_key=api_key)
+    return _client
 
 
 def generate_remarks(glucose, haemoglobin, cholesterol):
-    model = get_model()
+    client = get_client()
 
-    # model expects a 2D array - one row, three columns
-    features = [[glucose, haemoglobin, cholesterol]]
-    prediction = model.predict(features)[0]
-    probability = model.predict_proba(features)[0][1]  # probability of "high risk" class
+    prompt = f"""You are a clinical decision support assistant. Based on the following blood test results for an adult patient, provide a brief health risk assessment in 2-3 sentences. Be specific about which values are concerning and what condition they may indicate. Do not recommend specific medications. Keep the tone professional and informative.
 
-    flags = []
-    if glucose > 125:
-        flags.append("elevated glucose")
-    if haemoglobin < 12:
-        flags.append("low haemoglobin")
-    if cholesterol > 240:
-        flags.append("high cholesterol")
+Blood test results:
+- Fasting Glucose: {glucose} mg/dL (normal range: 70-100 mg/dL)
+- Haemoglobin: {haemoglobin} g/dL (normal range: 12-17 g/dL)
+- Total Cholesterol: {cholesterol} mg/dL (normal range: below 200 mg/dL)
 
-    if prediction == 1:
-        risk_text = f"high risk ({probability * 100:.0f}% confidence)"
-    else:
-        risk_text = f"low risk ({(1 - probability) * 100:.0f}% confidence)"
+Provide the assessment as a single paragraph with no headers or bullet points."""
 
-    if flags:
-        flag_text = ", ".join(flags)
-        remarks = (
-            f"Model prediction: {risk_text}. "
-            f"Notable values - {flag_text}. "
-            f"Recommend consulting a physician for further evaluation."
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a clinical decision support assistant that provides brief, accurate health risk assessments based on blood test values."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            max_tokens=150,
+            temperature=0.3,
         )
-    else:
-        remarks = (
-            f"Model prediction: {risk_text}. "
-            f"All three values are within normal reference ranges."
-        )
+        remarks = response.choices[0].message.content.strip()
+        return remarks
 
-    return remarks
+    except Exception as e:
+        return f"Unable to generate AI assessment at this time. Error: {str(e)}"
